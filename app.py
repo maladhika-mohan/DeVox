@@ -26,158 +26,70 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# ── Initialize session state ─────────────────────────────────────────────
+if "pipeline_done" not in st.session_state:
+    st.session_state.pipeline_done = False
+if "results" not in st.session_state:
+    st.session_state.results = None
+if "total_elapsed" not in st.session_state:
+    st.session_state.total_elapsed = 0
+
 # ── Custom CSS — Light Theme ─────────────────────────────────────────────
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
-/* Global */
-html, body, [class*="css"] {
-    font-family: 'Inter', sans-serif;
-}
+html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
 
-/* Force light background on main area */
 .stApp, .main, [data-testid="stAppViewContainer"] {
     background-color: #f8fafc !important;
     color: #1e293b !important;
 }
+.main .block-container { padding-top: 2rem; max-width: 1100px; }
 
-/* Main container */
-.main .block-container {
-    padding-top: 2rem;
-    max-width: 1100px;
-}
-
-/* Hero header */
 .hero-container {
-    text-align: center;
-    padding: 2.5rem 1.5rem 2rem;
-    margin-bottom: 2rem;
+    text-align: center; padding: 2.5rem 1.5rem 2rem; margin-bottom: 2rem;
     background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%);
-    border-radius: 20px;
-    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.25);
+    border-radius: 20px; box-shadow: 0 4px 20px rgba(99, 102, 241, 0.25);
 }
-.hero-title {
-    font-size: 3rem;
-    font-weight: 900;
-    color: #ffffff;
-    margin-bottom: 0.3rem;
-    letter-spacing: -1px;
-}
-.hero-subtitle {
-    font-size: 1.1rem;
-    color: rgba(255, 255, 255, 0.85);
-    font-weight: 400;
-    margin-top: 0;
-}
+.hero-title { font-size: 3rem; font-weight: 900; color: #fff; margin-bottom: 0.3rem; letter-spacing: -1px; }
+.hero-subtitle { font-size: 1.1rem; color: rgba(255,255,255,0.85); font-weight: 400; margin-top: 0; }
 
-/* Stage cards */
 .stage-card {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 1rem 1.2rem;
-    margin-bottom: 0.6rem;
-    transition: all 0.2s ease;
+    background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
+    padding: 1rem 1.2rem; margin-bottom: 0.6rem; transition: all 0.2s ease;
 }
-.stage-card:hover {
-    border-color: #cbd5e1;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-}
-.stage-label {
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    color: #7c3aed;
-}
-.stage-title {
-    font-size: 1rem;
-    font-weight: 600;
-    color: #1e293b;
-    margin-top: 0.15rem;
-}
-.stage-status {
-    font-size: 0.85rem;
-    color: #64748b;
-    margin-top: 0.3rem;
-}
+.stage-card:hover { border-color: #cbd5e1; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+.stage-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #7c3aed; }
+.stage-title { font-size: 1rem; font-weight: 600; color: #1e293b; margin-top: 0.15rem; }
+.stage-status { font-size: 0.85rem; color: #64748b; margin-top: 0.3rem; }
 .stage-done { border-left: 4px solid #10b981; }
 .stage-running { border-left: 4px solid #f59e0b; animation: pulse-border 1.5s infinite; }
 .stage-pending { border-left: 4px solid #cbd5e1; opacity: 0.5; }
+@keyframes pulse-border { 0%,100%{border-left-color:#f59e0b;} 50%{border-left-color:rgba(245,158,11,0.4);} }
 
-@keyframes pulse-border {
-    0%, 100% { border-left-color: #f59e0b; }
-    50% { border-left-color: rgba(245, 158, 11, 0.4); }
-}
+.result-card { background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 16px; padding: 1.5rem; margin: 1rem 0; }
 
-/* Result card */
-.result-card {
-    background: #ecfdf5;
-    border: 1px solid #a7f3d0;
-    border-radius: 16px;
-    padding: 1.5rem;
-    margin: 1rem 0;
-}
-
-/* Upload zone */
 .upload-zone {
-    background: #ffffff;
-    border: 2px dashed #cbd5e1;
-    border-radius: 16px;
-    padding: 2.5rem;
-    text-align: center;
-    transition: border-color 0.3s ease;
+    background: #fff; border: 2px dashed #cbd5e1; border-radius: 16px;
+    padding: 2.5rem; text-align: center; transition: border-color 0.3s ease;
 }
-.upload-zone:hover {
-    border-color: #8b5cf6;
-}
+.upload-zone:hover { border-color: #8b5cf6; }
 
-/* Stats row */
-.stat-box {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 1.1rem 1rem;
-    text-align: center;
-}
-.stat-value {
-    font-size: 1.4rem;
-    font-weight: 800;
-    color: #6366f1;
-}
-.stat-label {
-    font-size: 0.72rem;
-    color: #64748b;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-top: 0.35rem;
-}
+.stat-box { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.1rem 1rem; text-align: center; }
+.stat-value { font-size: 1.4rem; font-weight: 800; color: #6366f1; }
+.stat-label { font-size: 0.72rem; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-top: 0.35rem; }
 
-/* Sidebar styling */
-section[data-testid="stSidebar"] > div {
-    background: #ffffff !important;
-    border-right: 1px solid #e2e8f0;
-}
+section[data-testid="stSidebar"] > div { background: #fff !important; border-right: 1px solid #e2e8f0; }
 section[data-testid="stSidebar"] label,
 section[data-testid="stSidebar"] .stMarkdown p,
 section[data-testid="stSidebar"] .stMarkdown h5,
-section[data-testid="stSidebar"] span {
-    color: #334155 !important;
-}
+section[data-testid="stSidebar"] span { color: #334155 !important; }
 
-/* Streamlit widget overrides for light theme */
-.stMarkdown h3, .stMarkdown h5 {
-    color: #1e293b !important;
-}
-.stMarkdown p {
-    color: #334155 !important;
-}
+.stMarkdown h3, .stMarkdown h5 { color: #1e293b !important; }
+.stMarkdown p { color: #334155 !important; }
 
-/* Hide default Streamlit elements for cleaner look */
-#MainMenu {visibility: hidden;}
-header {visibility: hidden;}
-footer {visibility: hidden;}
+footer { visibility: hidden; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -367,12 +279,8 @@ def run_pipeline_with_progress(audio_path: str, skip_pitch: bool, skip_midi: boo
 with st.sidebar:
     st.markdown("""
     <div style="text-align:center; padding: 1rem 0;">
-        <span style="font-size: 2rem; font-weight: 900; color: #6366f1;">
-            DeVox
-        </span>
-        <div style="color: #64748b; font-size: 0.8rem; margin-top: 0.25rem;">
-            v0.1.0 &bull; 8-Stage Pipeline
-        </div>
+        <span style="font-size: 2rem; font-weight: 900; color: #6366f1;">DeVox</span>
+        <div style="color: #64748b; font-size: 0.8rem; margin-top: 0.25rem;">v0.1.0 &bull; 8-Stage Pipeline</div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -409,230 +317,228 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
 
+    # Reset button to process a new file
+    if st.session_state.pipeline_done:
+        st.markdown("---")
+        if st.button("🔄 Process New File", use_container_width=True):
+            st.session_state.pipeline_done = False
+            st.session_state.results = None
+            st.rerun()
 
-# ── Main Content ─────────────────────────────────────────────────────────
-render_hero()
 
-# Upload section
-st.markdown("### Upload Your Audio")
-
-uploaded_file = st.file_uploader(
-    "Drag & drop or browse for an audio file",
-    type=["mp3", "mpeg", "wav", "flac", "ogg", "m4a", "aac", "wma"],
-    help="Supported formats: MP3, WAV, FLAC, OGG, M4A, AAC",
-    label_visibility="collapsed",
-)
-
-if uploaded_file is not None:
-    # Show uploaded file info
-    file_size_mb = uploaded_file.size / (1024 * 1024)
-
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.markdown(f"""
-        <div class="stat-box">
-            <div class="stat-value">{uploaded_file.name.split('.')[-1].upper()}</div>
-            <div class="stat-label">Format</div>
-        </div>
-        """, unsafe_allow_html=True)
-    with col2:
-        st.markdown(f"""
-        <div class="stat-box">
-            <div class="stat-value">{file_size_mb:.1f} MB</div>
-            <div class="stat-label">File Size</div>
-        </div>
-        """, unsafe_allow_html=True)
-    with col3:
-        st.markdown(f"""
-        <div class="stat-box">
-            <div class="stat-value" style="font-size:1.1rem;">{uploaded_file.name[:25]}</div>
-            <div class="stat-label">Filename</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown("")
-
-    # Preview original audio
-    st.markdown("##### Original Audio Preview")
-    st.audio(uploaded_file, format=f"audio/{uploaded_file.name.split('.')[-1]}")
-
+# ── Helper: show results (used both after pipeline and on rerun) ─────────
+def show_results(results, total_elapsed):
     st.markdown("---")
+    st.markdown("### Results")
 
-    # Process button
-    if st.button("Remove Vocals & Generate Instrumental", type="primary", use_container_width=True):
-
-        # Save uploaded file to temp location
-        input_dir = OUTPUT_DIR.parent / "input"
-        input_dir.mkdir(exist_ok=True)
-
-        # Normalize extension: Streamlit reports MP3 as .mpeg
-        filename = uploaded_file.name
-        ext_map = {".mpeg": ".mp3", ".mpga": ".mp3"}
-        stem = Path(filename).stem
-        ext = Path(filename).suffix.lower()
-        if ext in ext_map:
-            filename = stem + ext_map[ext]
-
-        temp_path = input_dir / filename
-        with open(temp_path, "wb") as f:
-            f.write(uploaded_file.getbuffer())
-
-        st.markdown("### Processing Pipeline")
-
-        total_start = time.time()
-
-        try:
-            results = run_pipeline_with_progress(
-                str(temp_path),
-                skip_pitch=skip_pitch,
-                skip_midi=skip_midi,
-                skip_synth=skip_synth,
-            )
-
-            total_elapsed = time.time() - total_start
-
-            # ── Success section ──────────────────────────────────────────
-            st.markdown("---")
-            st.markdown("### Results")
-
-            st.markdown(f"""
-            <div class="result-card">
-                <div style="font-size: 1.3rem; font-weight: 700; color: #059669; margin-bottom: 0.5rem;">
-                    ✓ Pipeline Complete
-                </div>
-                <div style="color: #065f46; font-size: 0.95rem;">
-                    Processed in <b>{total_elapsed:.1f}s</b>
-                    &bull; Tempo: <b>{results.get('tempo', 0):.0f} BPM</b>
-                    &bull; Duration: <b>{results.get('duration', 0):.1f}s</b>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-
-            # Audio player for result
-            st.markdown("##### Instrumental Output (Vocals Removed)")
-            wav_path = OUTPUT_DIR / "final_instrumental.wav"
-            mp3_path = OUTPUT_DIR / "final_instrumental.mp3"
-
-            if wav_path.exists():
-                st.audio(str(wav_path), format="audio/wav")
-
-            # Download buttons
-            dl_col1, dl_col2, dl_col3 = st.columns(3)
-            with dl_col1:
-                if wav_path.exists():
-                    with open(wav_path, "rb") as f:
-                        st.download_button(
-                            "Download WAV (Lossless)",
-                            data=f.read(),
-                            file_name="instrumental.wav",
-                            mime="audio/wav",
-                            use_container_width=True,
-                        )
-            with dl_col2:
-                if mp3_path.exists():
-                    with open(mp3_path, "rb") as f:
-                        st.download_button(
-                            "Download MP3",
-                            data=f.read(),
-                            file_name="instrumental.mp3",
-                            mime="audio/mpeg",
-                            use_container_width=True,
-                        )
-            with dl_col3:
-                midi_file = OUTPUT_DIR / "06_instrumental.mid"
-                if midi_file.exists():
-                    with open(midi_file, "rb") as f:
-                        st.download_button(
-                            "Download MIDI",
-                            data=f.read(),
-                            file_name="instrumental.mid",
-                            mime="audio/midi",
-                            use_container_width=True,
-                        )
-
-            # Separated stems section
-            st.markdown("---")
-            st.markdown("##### Separated Stems")
-            stem_names = ["drums", "bass", "other", "vocals"]
-            stem_cols = st.columns(4)
-            for i, name in enumerate(stem_names):
-                stem_path = OUTPUT_DIR / f"05_stem_{name}.wav"
-                if stem_path.exists():
-                    with stem_cols[i]:
-                        st.markdown(f"**{name.capitalize()}**")
-                        st.audio(str(stem_path), format="audio/wav")
-                        with open(stem_path, "rb") as f:
-                            st.download_button(
-                                f"Download {name}",
-                                data=f.read(),
-                                file_name=f"stem_{name}.wav",
-                                mime="audio/wav",
-                                use_container_width=True,
-                                key=f"dl_stem_{name}",
-                            )
-
-            # Diagnostic plots
-            st.markdown("---")
-            st.markdown("##### Diagnostic Visualizations")
-            plot_col1, plot_col2 = st.columns(2)
-            with plot_col1:
-                features_plot = OUTPUT_DIR / "03_features_plot.png"
-                if features_plot.exists():
-                    st.image(str(features_plot), caption="Feature Extraction Report",
-                             use_container_width=True)
-            with plot_col2:
-                pitch_plot = OUTPUT_DIR / "04_pitch_plot.png"
-                if pitch_plot.exists():
-                    st.image(str(pitch_plot), caption="Pitch Contour (CREPE)",
-                             use_container_width=True)
-
-            # Feature summary
-            if "features" in results:
-                with st.expander("Feature Summary (JSON)"):
-                    st.json(results["features"])
-
-        except Exception as e:
-            st.error(f"Pipeline error: {str(e)}")
-            st.exception(e)
-
-        finally:
-            # Clean up temp file
-            try:
-                temp_path.unlink(missing_ok=True)
-            except:
-                pass
-
-else:
-    # Empty state
-    st.markdown("""
-    <div class="upload-zone">
-        <div style="font-size: 3rem; margin-bottom: 0.5rem;">🎵</div>
-        <div style="font-size: 1.1rem; color: #1e293b; font-weight: 600; margin-bottom: 0.3rem;">
-            Upload an audio file to get started
+    st.markdown(f"""
+    <div class="result-card">
+        <div style="font-size: 1.3rem; font-weight: 700; color: #059669; margin-bottom: 0.5rem;">
+            ✓ Pipeline Complete
         </div>
-        <div style="font-size: 0.85rem; color: #64748b;">
-            Supports MP3, WAV, FLAC, OGG, M4A &bull; Processing runs entirely on your machine
+        <div style="color: #065f46; font-size: 0.95rem;">
+            Processed in <b>{total_elapsed:.1f}s</b>
+            &bull; Tempo: <b>{results.get('tempo', 0):.0f} BPM</b>
+            &bull; Duration: <b>{results.get('duration', 0):.1f}s</b>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # How it works section
-    st.markdown("")
-    st.markdown("### How It Works")
+    # Audio player for result
+    st.markdown("##### Instrumental Output (Vocals Removed)")
+    wav_path = OUTPUT_DIR / "final_instrumental.wav"
+    mp3_path = OUTPUT_DIR / "final_instrumental.mp3"
 
-    how_cols = st.columns(4)
-    steps = [
-        ("Upload", "Drop your audio file (song, humming, recording)"),
-        ("Separate", "Demucs v4 AI splits audio into drums, bass, other, vocals"),
-        ("Remove Vocals", "Vocal stem is discarded, instruments are remixed"),
-        ("Download", "Get your instrumental as WAV or MP3"),
-    ]
-    for i, (title, desc) in enumerate(steps):
-        with how_cols[i]:
+    if wav_path.exists():
+        st.audio(str(wav_path), format="audio/wav")
+
+    # Pre-read file bytes so download buttons don't cause issues
+    dl_col1, dl_col2, dl_col3 = st.columns(3)
+    with dl_col1:
+        if wav_path.exists():
+            wav_bytes = wav_path.read_bytes()
+            st.download_button(
+                "Download WAV (Lossless)", data=wav_bytes,
+                file_name="instrumental.wav", mime="audio/wav",
+                use_container_width=True, key="dl_wav",
+            )
+    with dl_col2:
+        if mp3_path.exists():
+            mp3_bytes = mp3_path.read_bytes()
+            st.download_button(
+                "Download MP3", data=mp3_bytes,
+                file_name="instrumental.mp3", mime="audio/mpeg",
+                use_container_width=True, key="dl_mp3",
+            )
+    with dl_col3:
+        midi_file = OUTPUT_DIR / "06_instrumental.mid"
+        if midi_file.exists():
+            midi_bytes = midi_file.read_bytes()
+            st.download_button(
+                "Download MIDI", data=midi_bytes,
+                file_name="instrumental.mid", mime="audio/midi",
+                use_container_width=True, key="dl_midi",
+            )
+
+    # Separated stems
+    st.markdown("---")
+    st.markdown("##### Separated Stems")
+    stem_names = ["drums", "bass", "other", "vocals"]
+    stem_cols = st.columns(4)
+    for i, name in enumerate(stem_names):
+        stem_path = OUTPUT_DIR / f"05_stem_{name}.wav"
+        if stem_path.exists():
+            with stem_cols[i]:
+                st.markdown(f"**{name.capitalize()}**")
+                st.audio(str(stem_path), format="audio/wav")
+                stem_bytes = stem_path.read_bytes()
+                st.download_button(
+                    f"Download {name}", data=stem_bytes,
+                    file_name=f"stem_{name}.wav", mime="audio/wav",
+                    use_container_width=True, key=f"dl_stem_{name}",
+                )
+
+    # Diagnostic plots
+    st.markdown("---")
+    st.markdown("##### Diagnostic Visualizations")
+    plot_col1, plot_col2 = st.columns(2)
+    with plot_col1:
+        features_plot = OUTPUT_DIR / "03_features_plot.png"
+        if features_plot.exists():
+            st.image(str(features_plot), caption="Feature Extraction Report", use_container_width=True)
+    with plot_col2:
+        pitch_plot = OUTPUT_DIR / "04_pitch_plot.png"
+        if pitch_plot.exists():
+            st.image(str(pitch_plot), caption="Pitch Contour (CREPE)", use_container_width=True)
+
+    # Feature summary
+    if "features" in results:
+        with st.expander("Feature Summary (JSON)"):
+            st.json(results["features"])
+
+
+# ── Main Content ─────────────────────────────────────────────────────────
+render_hero()
+
+# If pipeline already completed, show results directly
+if st.session_state.pipeline_done and st.session_state.results is not None:
+    st.markdown("### Upload Your Audio")
+    st.info("Pipeline already completed. Use the sidebar '🔄 Process New File' button to start over.")
+    show_results(st.session_state.results, st.session_state.total_elapsed)
+
+elif not st.session_state.pipeline_done:
+    # Upload section
+    st.markdown("### Upload Your Audio")
+
+    uploaded_file = st.file_uploader(
+        "Drag & drop or browse for an audio file",
+        type=["mp3", "mpeg", "wav", "flac", "ogg", "m4a", "aac", "wma"],
+        help="Supported formats: MP3, WAV, FLAC, OGG, M4A, AAC",
+        label_visibility="collapsed",
+    )
+
+    if uploaded_file is not None:
+        file_size_mb = uploaded_file.size / (1024 * 1024)
+
+        col1, col2, col3 = st.columns(3)
+        with col1:
             st.markdown(f"""
-            <div class="stat-box" style="min-height: 130px;">
-                <div class="stat-value" style="font-size: 1.2rem;">{i+1}</div>
-                <div style="font-weight: 600; color: #1e293b; margin: 0.4rem 0 0.2rem; font-size: 0.95rem;">{title}</div>
-                <div style="font-size: 0.78rem; color: #64748b;">{desc}</div>
+            <div class="stat-box">
+                <div class="stat-value">{uploaded_file.name.split('.')[-1].upper()}</div>
+                <div class="stat-label">Format</div>
             </div>
             """, unsafe_allow_html=True)
+        with col2:
+            st.markdown(f"""
+            <div class="stat-box">
+                <div class="stat-value">{file_size_mb:.1f} MB</div>
+                <div class="stat-label">File Size</div>
+            </div>
+            """, unsafe_allow_html=True)
+        with col3:
+            st.markdown(f"""
+            <div class="stat-box">
+                <div class="stat-value" style="font-size:1.1rem;">{uploaded_file.name[:25]}</div>
+                <div class="stat-label">Filename</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        st.markdown("")
+        st.markdown("##### Original Audio Preview")
+        st.audio(uploaded_file, format=f"audio/{uploaded_file.name.split('.')[-1]}")
+        st.markdown("---")
+
+        if st.button("Remove Vocals & Generate Instrumental", type="primary", use_container_width=True):
+            input_dir = OUTPUT_DIR.parent / "input"
+            input_dir.mkdir(exist_ok=True)
+
+            filename = uploaded_file.name
+            ext_map = {".mpeg": ".mp3", ".mpga": ".mp3"}
+            stem = Path(filename).stem
+            ext = Path(filename).suffix.lower()
+            if ext in ext_map:
+                filename = stem + ext_map[ext]
+
+            temp_path = input_dir / filename
+            with open(temp_path, "wb") as f:
+                f.write(uploaded_file.getbuffer())
+
+            st.markdown("### Processing Pipeline")
+            total_start = time.time()
+
+            try:
+                results = run_pipeline_with_progress(
+                    str(temp_path),
+                    skip_pitch=skip_pitch,
+                    skip_midi=skip_midi,
+                    skip_synth=skip_synth,
+                )
+                total_elapsed = time.time() - total_start
+
+                # Save to session state so results persist across reruns
+                st.session_state.pipeline_done = True
+                st.session_state.results = results
+                st.session_state.total_elapsed = total_elapsed
+
+                show_results(results, total_elapsed)
+
+            except Exception as e:
+                st.error(f"Pipeline error: {str(e)}")
+                st.exception(e)
+            finally:
+                try:
+                    temp_path.unlink(missing_ok=True)
+                except:
+                    pass
+
+    else:
+        st.markdown("""
+        <div class="upload-zone">
+            <div style="font-size: 3rem; margin-bottom: 0.5rem;">🎵</div>
+            <div style="font-size: 1.1rem; color: #1e293b; font-weight: 600; margin-bottom: 0.3rem;">
+                Upload an audio file to get started
+            </div>
+            <div style="font-size: 0.85rem; color: #64748b;">
+                Supports MP3, WAV, FLAC, OGG, M4A &bull; Processing runs entirely on your machine
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("")
+        st.markdown("### How It Works")
+        how_cols = st.columns(4)
+        steps = [
+            ("Upload", "Drop your audio file (song, humming, recording)"),
+            ("Separate", "Demucs v4 AI splits audio into drums, bass, other, vocals"),
+            ("Remove Vocals", "Vocal stem is discarded, instruments are remixed"),
+            ("Download", "Get your instrumental as WAV or MP3"),
+        ]
+        for i, (title, desc) in enumerate(steps):
+            with how_cols[i]:
+                st.markdown(f"""
+                <div class="stat-box" style="min-height: 130px;">
+                    <div class="stat-value" style="font-size: 1.2rem;">{i+1}</div>
+                    <div style="font-weight: 600; color: #1e293b; margin: 0.4rem 0 0.2rem; font-size: 0.95rem;">{title}</div>
+                    <div style="font-size: 0.78rem; color: #64748b;">{desc}</div>
+                </div>
+                """, unsafe_allow_html=True)
