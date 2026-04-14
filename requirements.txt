@@ -1,0 +1,13 @@
+librosa>=0.10.0
+soundfile>=0.12.0
+numpy
+scipy
+matplotlib
+torch
+torchaudio
+torchcrepe
+demucs
+basic-pitch
+pyfluidsynth
+pydub
+aubio; platform_system != "Windows"
