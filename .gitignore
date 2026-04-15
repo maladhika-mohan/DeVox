@@ -31,6 +31,9 @@ input/*.m4a
 # SoundFonts (large binary files)
 soundfonts/*.sf2
 
+# FluidSynth binaries (downloaded locally)
+fluidsynth_install/
+
 # OS
 .DS_Store
 Thumbs.db

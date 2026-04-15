@@ -17,9 +17,17 @@ log = get_logger("Stage 07")
 # ── Check FluidSynth availability ────────────────────────────────────────
 HAS_FLUIDSYNTH = False
 try:
+    # pyfluidsynth on Windows expects DLLs in specific paths;
+    # add our bundled fluidsynth_install/bin to the DLL search path first
+    import os, sys
+    _fs_bin = Path(__file__).resolve().parent.parent / "fluidsynth_install" / "bin"
+    if _fs_bin.exists():
+        os.add_dll_directory(str(_fs_bin))
+        # Also add to PATH so ctypes.util.find_library can locate it
+        os.environ["PATH"] = str(_fs_bin) + os.pathsep + os.environ.get("PATH", "")
     import fluidsynth
     HAS_FLUIDSYNTH = True
-except ImportError:
+except (ImportError, OSError):
     pass
 
 
