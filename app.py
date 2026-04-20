@@ -33,6 +33,10 @@ if "results" not in st.session_state:
     st.session_state.results = None
 if "total_elapsed" not in st.session_state:
     st.session_state.total_elapsed = 0
+if "replay_wav_path" not in st.session_state:
+    st.session_state.replay_wav_path = None
+if "replay_instrument" not in st.session_state:
+    st.session_state.replay_instrument = None
 
 # ── Custom CSS — Light Theme ─────────────────────────────────────────────
 st.markdown("""
@@ -323,6 +327,8 @@ with st.sidebar:
         if st.button("🔄 Process New File", use_container_width=True):
             st.session_state.pipeline_done = False
             st.session_state.results = None
+            st.session_state.replay_wav_path = None
+            st.session_state.replay_instrument = None
             st.rerun()
 
 
@@ -415,6 +421,57 @@ def show_results(results, total_elapsed):
     if "features" in results:
         with st.expander("Feature Summary (JSON)"):
             st.json(results["features"])
+
+    # ── Instrument Replay Section ────────────────────────────────────────
+    midi_file = OUTPUT_DIR / "06_instrumental.mid"
+    if midi_file.exists():
+        st.markdown("---")
+        st.markdown("### 🎹 Replay as Different Instrument")
+        st.markdown(
+            '<div style="color: #64748b; font-size: 0.9rem; margin-bottom: 1rem;">'
+            "Choose an instrument and we'll re-synthesize the MIDI transcription in that sound."
+            "</div>",
+            unsafe_allow_html=True,
+        )
+
+        from pipeline.instrument_replay import get_instrument_names, replay_as_instrument
+
+        instruments = get_instrument_names()
+
+        col_inst, col_btn = st.columns([3, 1])
+        with col_inst:
+            selected = st.selectbox(
+                "Choose an instrument",
+                instruments,
+                index=instruments.index("Piano"),
+                label_visibility="collapsed",
+            )
+        with col_btn:
+            replay_clicked = st.button("🎵 Replay", type="primary", use_container_width=True)
+
+        if replay_clicked:
+            with st.spinner(f"Synthesizing as {selected}..."):
+                wav_out = replay_as_instrument(str(midi_file), selected)
+            if wav_out and wav_out.exists():
+                st.session_state.replay_wav_path = str(wav_out)
+                st.session_state.replay_instrument = selected
+
+        # Show replay result (persists across reruns)
+        if st.session_state.replay_wav_path and Path(st.session_state.replay_wav_path).exists():
+            replay_path = Path(st.session_state.replay_wav_path)
+            st.markdown(f"##### 🔊 {st.session_state.replay_instrument} Version")
+            st.audio(str(replay_path), format="audio/wav")
+
+            replay_bytes = replay_path.read_bytes()
+            safe = st.session_state.replay_instrument.replace(" ", "_").lower()
+            st.download_button(
+                f"Download {st.session_state.replay_instrument} WAV",
+                data=replay_bytes,
+                file_name=f"replay_{safe}.wav",
+                mime="audio/wav",
+                use_container_width=True,
+                key="dl_replay",
+            )
 
 
 # ── Main Content ─────────────────────────────────────────────────────────
