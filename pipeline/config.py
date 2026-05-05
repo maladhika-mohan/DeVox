@@ -11,7 +11,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 INPUT_DIR = PROJECT_ROOT / "input"
 OUTPUT_DIR = PROJECT_ROOT / "output"
 SOUNDFONT_DIR = PROJECT_ROOT / "soundfonts"
-DEFAULT_SOUNDFONT = SOUNDFONT_DIR / "GeneralUser_GS.sf2"
+DEFAULT_SOUNDFONT = SOUNDFONT_DIR / "FluidR3_GM.sf2"  # 142MB pro-quality (fallback: GeneralUser_GS.sf2)
 
 # Ensure directories exist
 INPUT_DIR.mkdir(exist_ok=True)
